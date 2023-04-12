@@ -1,0 +1,92 @@
+local FLY_SPEED = 50 -- Скорость полета
+
+local flying = false -- Состояние полета
+
+local userInputService = game:GetService("UserInputService")
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:FindFirstChild("HumanoidRootPart")
+local flySound = Instance.new("Sound")
+flySound.SoundId = "rbxassetid://743001565"
+flySound.Volume = 0.2
+flySound.Pitch = 1
+flySound.Looped = true
+flySound.Parent = rootPart
+
+-- Включаем/выключаем полет по нажатию клавиши F
+function toggleFly()
+    flying = not flying
+    if flying then
+        flySound:Play()
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+    else
+        flySound:Stop()
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end
+
+-- Изменяем скорость полета при изменении масштаба персонажа
+function onCharacterScale(scale)
+    FLY_SPEED = 50 * (scale / 1.5)
+end
+
+-- Обработка нажатий клавиш
+userInputService.InputBegan:Connect(function(input, checked)
+    if not checked and flying then
+        if input.KeyCode == Enum.KeyCode.W then
+            rootPart.Velocity = rootPart.CFrame.lookVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.S then
+            rootPart.Velocity = -rootPart.CFrame.lookVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.A then
+            rootPart.Velocity = -rootPart.CFrame.rightVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.D then
+            rootPart.Velocity = rootPart.CFrame.rightVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.Space then
+            rootPart.Velocity = Vector3.new(0, FLY_SPEED, 0)
+        elseif input.KeyCode == Enum.KeyCode.C then
+            rootPart.Velocity = Vector3.new(0, -FLY_SPEED, 0)
+        end
+    end
+end)
+
+-- Обработка отжатий клавиш клавиш
+userInputService.InputEnded:Connect(function(input, checked)
+    if not checked and flying then
+        if input.KeyCode == Enum.KeyCode.W and userInputService:IsKeyDown(Enum.KeyCode.S) then
+            rootPart.Velocity = -rootPart.CFrame.lookVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.S and userInputService:IsKeyDown(Enum.KeyCode.W) then
+            rootPart.Velocity = rootPart.CFrame.lookVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.A and userInputService:IsKeyDown(Enum.KeyCode.D) then
+            rootPart.Velocity = rootPart.CFrame.rightVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.D and userInputService:IsKeyDown(Enum.KeyCode.A) then
+            rootPart.Velocity = -rootPart.CFrame.rightVector * FLY_SPEED
+        elseif input.KeyCode == Enum.KeyCode.Space then
+            rootPart.Velocity = Vector3.new(0, 0, 0)
+        elseif input.KeyCode == Enum.KeyCode.C then
+            rootPart.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+end)
+
+-- Запускаем обработчики событий
+userInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.F then
+        toggleFly()
+    end
+end)
+
+character.ChildAdded:Connect(function(child)
+    if child.Name == "HumanoidRootPart" then
+        rootPart = child
+    end
+end)
+
+humanoid.Died:Connect(function()
+    flying = false
+    flySound:Stop()
+end)
+
+-- Запускаем обработку
+onCharacterScale(character:GetAttribute("toolScale") or 1)
+character:GetAttributeChangedSignal("toolScale"):Connect(onCharacterScale)
